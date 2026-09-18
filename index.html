@@ -74,10 +74,39 @@
     .btn-check { background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 14px; font-weight: bold; cursor: pointer; font-size: 12px; margin-left: 2px; }
     .btn-check.done { background: #059669; }
     
-    .calendar-grid { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-    .month-day { padding: 4px 2px; font-size: 11px; border: 1px solid #eee; border-radius: 4px; min-height: 48px; background: #fafafa; }
-    .month-day .num { font-size: 10px; color: #9ca3af; margin-bottom: 2px; }
+    /* 修复后的月视图样式 */
+    .calendar-grid { 
+      background: white; 
+      border-radius: 8px; 
+      padding: 8px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+      overflow-x: auto; 
+    }
+    .month-grid { 
+      display: grid; 
+      grid-template-columns: repeat(7, minmax(42px, 1fr)); 
+      gap: 3px; 
+      text-align: center; 
+    }
+    .month-header { 
+      font-size: 11px; 
+      font-weight: bold; 
+      color: var(--primary); 
+      padding: 4px 0; 
+      background: #edf2f7; 
+      border-radius: 4px; 
+    }
+    .month-day { 
+      padding: 3px 2px; 
+      font-size: 10px; 
+      border: 1px solid #eee; 
+      border-radius: 4px; 
+      min-height: 52px; 
+      background: #fafafa; 
+      display: flex;
+      flex-direction: column;
+    }
+    .month-day .num { font-size: 10px; color: #6b7280; font-weight: bold; margin-bottom: 2px; }
     .month-tag { color: white; font-size: 9px; padding: 1px 2px; border-radius: 2px; margin-top: 1px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .month-tag.paid { background: #10b981; }
     .month-tag.unpaid { background: #ef4444; }
@@ -148,28 +177,23 @@
       canvas.height = 512;
       const ctx = canvas.getContext('2d');
 
-      // 背景
       ctx.fillStyle = '#4f46e5';
       ctx.beginPath();
       ctx.roundRect(0, 0, 512, 512, 100);
       ctx.fill();
 
-      // 板卡背景
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.roundRect(90, 80, 332, 352, 24);
       ctx.fill();
 
-      // 清单复选框与线条
       const lines = [150, 220, 290, 360];
       lines.forEach((y, i) => {
-        // 复选框
         ctx.fillStyle = i < 2 ? '#10b981' : '#cbd5e1';
         ctx.beginPath();
         ctx.roundRect(130, y, 32, 32, 6);
         ctx.fill();
 
-        // 勾选号
         if(i < 2) {
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 4;
@@ -180,7 +204,6 @@
           ctx.stroke();
         }
 
-        // 文本线
         ctx.fillStyle = i < 2 ? '#94a3b8' : '#475569';
         ctx.beginPath();
         ctx.roundRect(180, y + 8, 200, 16, 8);
@@ -206,7 +229,6 @@
 
     setupAppIcon();
 
-    // 初始导入数据
     const DEFAULT_ITEMS = [
       { id: '1', name: '163443 600kw grease hole audit', dueDate: '2026-09-21', done: false },
       { id: '2', name: '2个供应商发邮件on site audit', dueDate: '2026-09-21', done: false },
@@ -222,7 +244,6 @@
       updateAppBadge();
     }
 
-    // 计算两个日期之间的【工作日】相差天数（排除周六日）
     function getWorkingDaysBetween(startDate, endDate) {
       let count = 0;
       let cur = new Date(startDate.getTime());
@@ -231,7 +252,6 @@
       target.setHours(0,0,0,0);
 
       if (cur > target) {
-        // 已逾期，返回负数天数
         while (cur > target) {
           cur.setDate(cur.getDate() - 1);
           const day = cur.getDay();
@@ -248,7 +268,6 @@
       return count;
     }
 
-    // 判断项目是否处于提醒状态（黄色或红色）且未完成
     function getItemStatus(item) {
       if (item.done) return { type: 'paid', text: '已完成 ✓' };
 
@@ -269,7 +288,6 @@
       }
     }
 
-    // 更新应用图标上的红点数字
     function updateAppBadge() {
       const activeAlerts = store.items.filter(item => {
         if (item.done) return false;
@@ -445,11 +463,10 @@
       saveData();
     }
 
-    // 渲染周视图 (本周7天)
     function renderWeek() {
       const container = document.getElementById('week-container');
       const today = new Date();
-      const firstDay = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // 周一
+      const firstDay = new Date(today.setDate(today.getDate() - today.getDay() + 1));
 
       let html = '';
       for (let i = 0; i < 7; i++) {
@@ -474,7 +491,7 @@
       container.innerHTML = html;
     }
 
-    // 渲染月视图
+    // 修复后的月视图渲染逻辑
     function renderMonth() {
       const container = document.getElementById('month-days');
       const now = new Date();
@@ -484,14 +501,21 @@
       const firstDay = new Date(year, month, 1).getDay();
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       
-      let html = '';
-      for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
-        html += `<div class="month-day" style="background:#f3f4f6;"></div>`;
+      // 1. 渲染星期表头
+      const weekHeaders = ['一', '二', '三', '四', '五', '六', '日'];
+      let html = weekHeaders.map(h => `<div class="month-header">${h}</div>`).join('');
+
+      // 2. 补齐1号前的空白格（以周一为每周第一天）
+      const emptyDays = firstDay === 0 ? 6 : firstDay - 1;
+      for (let i = 0; i < emptyDays; i++) {
+        html += `<div class="month-day" style="background:#f3f4f6; border:none;"></div>`;
       }
 
+      // 3. 渲染日期格子
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const todayItems = store.items.filter(b => b.dueDate === dateStr);
+        
         const tags = todayItems.map(b => `
           <div class="month-tag ${b.done ? 'paid' : 'unpaid'}">${b.name}</div>
         `).join('');
@@ -506,7 +530,6 @@
       container.innerHTML = html;
     }
 
-    // 渲染年视图
     function renderYear() {
       const year = new Date().getFullYear();
       const head = document.getElementById('year-head');
@@ -570,3 +593,4 @@
   </script>
 </body>
 </html>
+
