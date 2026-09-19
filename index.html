@@ -170,26 +170,26 @@
   </div>
 
   <script>
-    // 基础 App Icon 生成器（支持绘制红点角标）
-    function generateAppIcon(badgeCount = 0) {
+    // 原版纯净 App Icon 生成器（不包含红点）
+    function setupAppIcon() {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext('2d');
 
-      // 背景图标
+      // 背景
       ctx.fillStyle = '#4f46e5';
       ctx.beginPath();
       ctx.roundRect(0, 0, 512, 512, 100);
       ctx.fill();
 
-      // 白卡片
+      // 卡片主体
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.roundRect(90, 80, 332, 352, 24);
       ctx.fill();
 
-      // 清单线条
+      // 列表条目
       const lines = [150, 220, 290, 360];
       lines.forEach((y, i) => {
         ctx.fillStyle = i < 2 ? '#10b981' : '#cbd5e1';
@@ -213,28 +213,7 @@
         ctx.fill();
       });
 
-      // 如果有待办提醒，绘制右上角红点数字角标
-      if (badgeCount > 0) {
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.arc(420, 92, 70, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 12;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 80px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(badgeCount > 99 ? '99+' : badgeCount, 420, 96);
-      }
-
-      return canvas.toDataURL('image/png');
-    }
-
-    function setupAppIcon(badgeCount = 0) {
-      const iconDataUrl = generateAppIcon(badgeCount);
+      const iconDataUrl = canvas.toDataURL('image/png');
       document.getElementById('apple-icon-placeholder').href = iconDataUrl;
       document.getElementById('favicon-placeholder').href = iconDataUrl;
 
@@ -251,6 +230,8 @@
       const manifestStr = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifestObj));
       document.getElementById('manifest-placeholder').href = manifestStr;
     }
+
+    setupAppIcon();
 
     const DEFAULT_ITEMS = [
       { id: '1', name: '163443 600kw grease hole audit', dueDate: '2026-09-21', done: false },
@@ -311,7 +292,7 @@
       }
     }
 
-    // 更新系统角标与 Icon 红点
+    // 仅通过系统原生 Badge API 更新应用图标角标
     function updateAppBadge() {
       const activeAlerts = store.items.filter(item => {
         if (item.done) return false;
@@ -319,25 +300,12 @@
         return status.type === 'due-today' || status.type === 'due-soon';
       }).length;
 
-      // 1. 调用系统原生 Badge API (iOS 16.4+ 支持)
       if ('setAppBadge' in navigator) {
         if (activeAlerts > 0) {
           navigator.setAppBadge(activeAlerts).catch(() => {});
         } else {
           navigator.clearAppBadge().catch(() => {});
         }
-      }
-
-      // 2. 重新绘制 Icon 写入角标红点
-      setupAppIcon(activeAlerts);
-    }
-
-    // 请求 Notification 权限（iOS 必须授权后才允许给主屏幕图标显示角标）
-    function requestNotificationPermission() {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(() => {
-          updateAppBadge();
-        });
       }
     }
 
@@ -622,11 +590,7 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob));
     }
 
-    document.addEventListener('click', requestNotificationPermission, { once: true });
-
     renderToday();
   </script>
 </body>
 </html>
-
-
