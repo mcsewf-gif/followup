@@ -174,6 +174,581 @@
     const DEFAULT_ITEMS = [
       { id: '1', name: '163443 600kw grease hole audit', dueDate: '2026-09-21', done: false },
       { id: '2', name: '2个供应商发邮件on site audit', dueDate: '2026-09-21', done: false },
+      { id: '3', name: 'follow up email to Mandeep', dueDate: '2026-09-22', done: true }
+    ];
+    
+    let store = JSON.parse(localStorage.getItem('work_followup_data')) || {
+      items: DEFAULT_ITEMS
+    };
+
+    // 计算工作日间隔辅助函数
+    function getWorkingDaysBetween(startDate, endDate) {
+      let count = 0;
+      let cur = new Date(startDate.getTime());
+      cur.setHours(0,0,0,0);
+      let target = new Date(endDate.getTime());
+      target.setHours(0,0,0,0);
+
+      if (cur > target) {
+        while (cur > target) {
+          cur.setDate(cur.getDate() - 1);
+          const day = cur.getDay();
+          if (day !== 0 && day !== 6) count--;
+        }
+        return count;
+      }
+
+      while (cur < target) {
+        cur.setDate(cur.getDate() + 1);
+        const day = cur.getDay();
+        if (day !== 0 && day !== 6) count++;
+      }
+      return count;
+    }
+
+    // 获取单条事项的状态
+    function getItemStatus(item) {
+      if (item.done) return { type: 'paid', text: '已完成 ✓' };
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const due = new Date(item.dueDate + 'T00:00:00');
+      
+      const workDaysLeft = getWorkingDaysBetween(today, due);
+
+      if (workDaysLeft < 0) {
+        return { type: 'due-today', text: `已逾期 ${Math.abs(workDaysLeft)} 个工作日 (${item.dueDate})` };
+      } else if (workDaysLeft === 0) {
+        return { type: 'due-today', text: `今日到期 (${item.dueDate})` };
+      } else if (workDaysLeft <= 3) {
+        return { type: 'due-soon', text: `还剩 ${workDaysLeft} 个工作日到期 (${item.dueDate})` };
+      } else {
+        return { type: 'normal', text: `到期日: ${item.dueDate}` };
+      }
+    }
+
+    // 统计当前未完成的到期/即将到期事项总数
+    function getActiveAlertsCount(items = store.items) {
+      return items.filter(item => {
+        if (item.done) return false;
+        const status = getItemStatus(item);
+        return status.type === 'due-today' || status.type === 'due-soon';
+      }).length;
+    }
+
+    /**
+     * 绘制 512x512 高清图标，根据未完成到期事项数量自动绘制红点数字角标
+     */
+    function setupAppIcon(items = store.items) {
+      const activeAlertsCount = getActiveAlertsCount(items);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      // 1. 绘制紫蓝色背景底座
+      ctx.fillStyle = '#4f46e5';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 512, 512, 100);
+      ctx.fill();
+
+      // 2. 绘制中间白色卡片
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(90, 80, 332, 352, 24);
+      ctx.fill();
+
+      // 3. 绘制列表项占位符（4行列表）
+      const lines = [150, 220, 290, 360];
+      lines.forEach((y, i) => {
+        ctx.fillStyle = i < 2 ? '#10b981' : '#cbd5e1';
+        ctx.beginPath();
+        ctx.roundRect(130, y, 32, 32, 6);
+        ctx.fill();
+
+        if (i < 2) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(136, y + 16);
+          ctx.lineTo(144, y + 24);
+          ctx.lineTo(156, y + 10);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = i < 2 ? '#94a3b8' : '#475569';
+        ctx.beginPath();
+        ctx.roundRect(180, y + 8, 200, 16, 8);
+        ctx.fill();
+      });
+
+      // 4. 当存在到期未完成项目时，在图标右上角绘制红色角标及数字
+      if (activeAlertsCount > 0) {
+        const badgeX = 400;
+        const badgeY = 110;
+        const badgeRadius = 52;
+
+        // 绘制红底圆圈及白色外边框
+        ctx.fillStyle = '#ef4444';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 14;
+        ctx.beginPath();
+        ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // 绘制白色数字
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 56px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const displayText = activeAlertsCount > 99 ? '99+' : String(activeAlertsCount);
+        ctx.fillText(displayText, badgeX, badgeY + 2);
+      }
+
+      // 5. 导出并更新 HTML icon 链接
+      const iconDataUrl = canvas.toDataURL('image/png');
+      const appleIconElem = document.getElementById('apple-icon-placeholder');
+      const faviconElem = document.getElementById('favicon-placeholder');
+      
+      if (appleIconElem) appleIconElem.href = iconDataUrl;
+      if (faviconElem) faviconElem.href = iconDataUrl;
+
+      // 6. 配置 PWA Manifest 属性
+      const manifestObj = {
+        name: "FollowUp",
+        short_name: "FollowUp",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#f3f4f6",
+        theme_color: "#4f46e5",
+        icons: [{ src: iconDataUrl, sizes: "512x512", type: "image/png" }]
+      };
+      
+      const manifestStr = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifestObj));
+      const manifestElem = document.getElementById('manifest-placeholder');
+      if (manifestElem) manifestElem.href = manifestStr;
+    }
+
+    function saveData() {
+      localStorage.setItem('work_followup_data', JSON.stringify(store));
+      updateAppBadge();
+      setupAppIcon(store.items);
+    }
+
+    // 更新 iOS/PWA 原生图标红点角标（App Badging API）
+    function updateAppBadge() {
+      const activeAlerts = getActiveAlertsCount(store.items);
+
+      if ('setAppBadge' in navigator) {
+        if (activeAlerts > 0) {
+          navigator.setAppBadge(activeAlerts).catch(() => {});
+        } else {
+          navigator.clearAppBadge().catch(() => {});
+        }
+      }
+    }
+
+    function switchView(view) {
+      document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`btn-${view}`).classList.add('active');
+      
+      document.getElementById('view-today').style.display = view === 'today' ? 'block' : 'none';
+      document.getElementById('view-week').style.display = view === 'week' ? 'block' : 'none';
+      document.getElementById('view-month').style.display = view === 'month' ? 'block' : 'none';
+      document.getElementById('view-year').style.display = view === 'year' ? 'block' : 'none';
+
+      if (view === 'today') renderToday();
+      if (view === 'week') renderWeek();
+      if (view === 'month') renderMonth();
+      if (view === 'year') renderYear();
+    }
+
+    function toggleCheck(id) {
+      const item = store.items.find(i => i.id === id);
+      if (item) {
+        item.done = !item.done;
+        saveData();
+        renderToday();
+      }
+    }
+
+    function editItem(id) {
+      const item = store.items.find(i => i.id === id);
+      if (!item) return;
+      
+      const newName = prompt('修改事项名称：', item.name);
+      if (newName === null) return;
+      
+      const newDate = prompt('修改到期日 (YYYY-MM-DD)：', item.dueDate);
+      if (newDate === null) return;
+
+      if (newName.trim() && newDate.trim()) {
+        item.name = newName.trim();
+        item.dueDate = newDate.trim();
+        saveData();
+        renderToday();
+      }
+    }
+
+    function deleteItem(id) {
+      const item = store.items.find(i => i.id === id);
+      if (item && confirm(`确定删除“${item.name}”吗？`)) {
+        store.items = store.items.filter(i => i.id !== id);
+        saveData();
+        renderToday();
+      }
+    }
+
+    function renderToday() {
+      const container = document.getElementById('today-list');
+
+      container.innerHTML = store.items.map((item) => {
+        const status = getItemStatus(item);
+        let cardClass = '';
+        if (status.type === 'paid') cardClass = 'status-paid';
+        if (status.type === 'due-today') cardClass = 'status-due-today';
+        if (status.type === 'due-soon') cardClass = 'status-due-soon';
+
+        return `
+          <div class="card ${cardClass}" data-id="${item.id}">
+            <div class="task-main">
+              <span class="drag-handle">☰</span>
+              <div class="task-info">
+                <h3>${item.name}</h3>
+                <div class="status ${cardClass ? 'bold' : ''}">${status.text}</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-icon" title="修改" onclick="event.stopPropagation(); editItem('${item.id}')">✏️</button>
+              <button class="btn-icon" title="删除" onclick="event.stopPropagation(); deleteItem('${item.id}')">🗑️</button>
+              <button class="btn-check ${item.done ? 'done' : ''}" onclick="event.stopPropagation(); toggleCheck('${item.id}')">
+                ${item.done ? 'Done ✓' : 'Done'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      initDragAndDrop();
+      updateAppBadge();
+      setupAppIcon(store.items);
+    }
+
+    function initDragAndDrop() {
+      const container = document.getElementById('today-list');
+      const cards = container.querySelectorAll('.card');
+      let draggedCard = null;
+
+      cards.forEach(card => {
+        const handle = card.querySelector('.drag-handle');
+
+        handle.addEventListener('mousedown', () => card.setAttribute('draggable', 'true'));
+        
+        card.addEventListener('dragstart', () => {
+          draggedCard = card;
+          setTimeout(() => card.classList.add('dragging'), 0);
+        });
+
+        card.addEventListener('dragend', () => {
+          card.removeAttribute('draggable');
+          card.classList.remove('dragging');
+          updateItemOrder();
+        });
+
+        handle.addEventListener('touchstart', () => {
+          draggedCard = card;
+          card.classList.add('dragging');
+        }, { passive: true });
+
+        handle.addEventListener('touchmove', (e) => {
+          if (!draggedCard) return;
+          const touch = e.touches[0];
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          const targetCard = target ? target.closest('.card') : null;
+
+          if (targetCard && targetCard !== draggedCard) {
+            const rect = targetCard.getBoundingClientRect();
+            const next = (touch.clientY - rect.top) > (rect.height / 2);
+            container.insertBefore(draggedCard, next ? targetCard.nextSibling : targetCard);
+          }
+        }, { passive: true });
+
+        handle.addEventListener('touchend', () => {
+          if (draggedCard) {
+            draggedCard.classList.remove('dragging');
+            draggedCard = null;
+            updateItemOrder();
+          }
+        });
+      });
+
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+        const afterElement = draggableElements.reduce((closest, child) => {
+          const box = child.getBoundingClientRect();
+          const offset = e.clientY - box.top - box.height / 2;
+          return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+        if (afterElement == null) {
+          container.appendChild(draggedCard);
+        } else {
+          container.insertBefore(draggedCard, afterElement);
+        }
+      });
+    }
+
+    function updateItemOrder() {
+      const container = document.getElementById('today-list');
+      const cards = container.querySelectorAll('.card');
+      const newIds = Array.from(cards).map(c => c.getAttribute('data-id'));
+      
+      store.items.sort((a, b) => newIds.indexOf(a.id) - newIds.indexOf(b.id));
+      saveData();
+    }
+
+    function renderWeek() {
+      const container = document.getElementById('week-container');
+      const today = new Date();
+      const firstDay = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(firstDay);
+        day.setDate(day.getDate() + i);
+        const dateStr = day.toISOString().split('T')[0];
+
+        const dayItems = store.items.filter(item => item.dueDate === dateStr);
+        const itemsHtml = dayItems.length > 0 ? dayItems.map(item => `
+          <div style="margin-left:8px; color:${item.done ? '#059669' : '#dc2626'};">
+            • ${item.name} (${item.done ? '已完成' : '待处理'})
+          </div>
+        `).join('') : '<div style="margin-left:8px; color:#9ca3af;">无到期事项</div>';
+
+        html += `
+          <div class="week-list-item">
+            <div class="week-date">${dateStr} (周${['日','一','二','三','四','五','六'][day.getDay()]})</div>
+            ${itemsHtml}
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function renderMonth() {
+      const container = document.getElementById('month-days');
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const weekHeaders = ['一', '二', '三', '四', '五', '六', '日'];
+      let html = weekHeaders.map(h => `<div class="month-header">${h}</div>`).join('');
+
+      const emptyDays = firstDay === 0 ? 6 : firstDay - 1;
+      for (let i = 0; i < emptyDays; i++) {
+        html += `<div class="month-day" style="background:#f3f4f6; border:none;"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const todayItems = store.items.filter(b => b.dueDate === dateStr);
+        
+        const tags = todayItems.map(b => `
+          <div class="month-tag ${b.done ? 'paid' : 'unpaid'}">${b.name}</div>
+        `).join('');
+
+        html += `
+          <div class="month-day">
+            <div class="num">${day}</div>
+            ${tags}
+          </div>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function renderYear() {
+      const year = new Date().getFullYear();
+      const head = document.getElementById('year-head');
+      const body = document.getElementById('year-body');
+
+      let headHtml = `<th>事项</th>`;
+      for (let m = 1; m <= 12; m++) {
+        headHtml += `<th>${m}月</th>`;
+      }
+      head.innerHTML = headHtml;
+
+      let bodyHtml = '';
+      store.items.forEach(item => {
+        bodyHtml += `<tr><strong><td>${item.name}</td></strong>`;
+        const itemMonth = parseInt(item.dueDate.split('-')[1], 10);
+        for (let m = 1; m <= 12; m++) {
+          if (m === itemMonth) {
+            bodyHtml += `<td>${item.done ? '<span class="badge-ok">✓</span>' : '<span class="badge-no">!</span>'}</td>`;
+          } else {
+            bodyHtml += `<td>-</td>`;
+          }
+        }
+        bodyHtml += `</tr>`;
+      });
+      body.innerHTML = bodyHtml;
+    }
+
+    function addBill() {
+      const nameInput = document.getElementById('new-name-input');
+      const dateInput = document.getElementById('new-date-input');
+      
+      const name = nameInput.value.trim();
+      const date = dateInput.value;
+
+      if (name && date) {
+        store.items.push({
+          id: Date.now().toString(),
+          name: name,
+          dueDate: date,
+          done: false
+        });
+        saveData();
+        nameInput.value = '';
+        dateInput.value = '';
+        renderToday();
+      } else {
+        alert('请输入有效的事项名称和到期日期');
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob));
+    }
+
+    // 初始化渲染
+    setupAppIcon();
+    renderToday();
+  </script>
+</body>
+</html>
+    .task-info { flex: 1; min-width: 0; }
+    .task-info h3 { font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status { font-size: 11px; color: #4b5563; }
+    .status.bold { font-weight: bold; }
+    
+    .actions { display: flex; align-items: center; gap: 4px; }
+    .btn-icon { background: transparent; border: none; font-size: 13px; cursor: pointer; padding: 3px; border-radius: 4px; opacity: 0.7; }
+    .btn-icon:active { opacity: 1; transform: scale(1.1); }
+    .btn-check { background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 14px; font-weight: bold; cursor: pointer; font-size: 12px; margin-left: 2px; }
+    .btn-check.done { background: #059669; }
+    
+    /* 月视图样式 */
+    .calendar-grid { 
+      background: white; 
+      border-radius: 8px; 
+      padding: 8px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+      overflow-x: auto; 
+    }
+    .month-grid { 
+      display: grid; 
+      grid-template-columns: repeat(7, minmax(42px, 1fr)); 
+      gap: 3px; 
+      text-align: center; 
+    }
+    .month-header { 
+      font-size: 11px; 
+      font-weight: bold; 
+      color: var(--primary); 
+      padding: 4px 0; 
+      background: #edf2f7; 
+      border-radius: 4px; 
+    }
+    .month-day { 
+      padding: 3px 2px; 
+      font-size: 10px; 
+      border: 1px solid #eee; 
+      border-radius: 4px; 
+      min-height: 52px; 
+      background: #fafafa; 
+      display: flex;
+      flex-direction: column;
+    }
+    .month-day .num { font-size: 10px; color: #6b7280; font-weight: bold; margin-bottom: 2px; }
+    .month-tag { color: white; font-size: 9px; padding: 1px 2px; border-radius: 2px; margin-top: 1px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .month-tag.paid { background: #10b981; }
+    .month-tag.unpaid { background: #ef4444; }
+
+    .week-list-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+    .week-date { font-weight: bold; color: var(--primary); margin-bottom: 4px; }
+
+    .year-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+    .year-table th, .year-table td { border: 1px solid #e5e7eb; padding: 6px 2px; }
+    .year-table th { background: #f9fafb; font-weight: bold; }
+    .badge-ok { color: #059669; font-weight: bold; }
+    .badge-no { color: #dc2626; }
+
+    .add-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+    .add-bar input[type="text"] { flex: 2; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 13px; }
+    .add-bar input[type="date"] { width: 110px; padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 12px; text-align: center; }
+    .add-bar button { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Work Follow Up 提醒</h1>
+  </header>
+
+  <div class="nav">
+    <button id="btn-today" class="active" onclick="switchView('today')">Follow Up</button>
+    <button id="btn-week" onclick="switchView('week')">周视图</button>
+    <button id="btn-month" onclick="switchView('month')">月视图</button>
+    <button id="btn-year" onclick="switchView('year')">年视图</button>
+  </div>
+
+  <div class="container">
+    <div id="view-today">
+      <div class="add-bar">
+        <input type="text" id="new-name-input" placeholder="事项名称...">
+        <input type="date" id="new-date-input">
+        <button onclick="addBill()">添加</button>
+      </div>
+      <div id="today-list"></div>
+    </div>
+
+    <div id="view-week" style="display: none;">
+      <div class="calendar-grid" id="week-container"></div>
+    </div>
+
+    <div id="view-month" style="display: none;">
+      <div class="calendar-grid">
+        <div class="month-grid" id="month-days"></div>
+      </div>
+    </div>
+
+    <div id="view-year" style="display: none;">
+      <div class="calendar-grid" style="overflow-x: auto;">
+        <table class="year-table">
+          <thead><tr id="year-head"></tr></thead>
+          <tbody id="year-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_ITEMS = [
+      { id: '1', name: '163443 600kw grease hole audit', dueDate: '2026-09-21', done: false },
+      { id: '2', name: '2个供应商发邮件on site audit', dueDate: '2026-09-21', done: false },
       { id: '3', name: 'follow up email to Mandeep', dueDate: '2026-09-22', done: false }
     ];
     
