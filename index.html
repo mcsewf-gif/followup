@@ -228,17 +228,9 @@
     }
 
     /**
-     * 绘制 512x512 高清 Follow up 图标 DataURI，并根据未完成黄色/浅红色项目渲染小红点提醒
-     * @param {Array} items - 包含待办事项的数组
+     * 绘制 512x512 高清纯净 Follow up 图标 DataURI（不含角标红点）
      */
-    function setupAppIcon(items = []) {
-      // 统计处于黄色（due-soon）或浅红色（due-today）状态的未完成项目数量
-      const activeAlertsCount = items.filter(item => {
-        if (item.done) return false;
-        const status = getItemStatus(item);
-        return status.type === 'due-today' || status.type === 'due-soon';
-      }).length;
-
+    function setupAppIcon() {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
@@ -280,32 +272,7 @@
         ctx.fill();
       });
 
-      // 4. 当存在黄色或浅红色项目时，在右上角绘制提醒红点及数量
-      if (activeAlertsCount > 0) {
-        const badgeX = 412;
-        const badgeY = 100;
-        const badgeRadius = 48;
-
-        // 绘制红底圆圈及白色外边缘
-        ctx.fillStyle = '#ef4444';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // 绘制白色数字
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 52px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        const displayText = activeAlertsCount > 99 ? '99+' : String(activeAlertsCount);
-        ctx.fillText(displayText, badgeX, badgeY + 2);
-      }
-
-      // 5. 导出并更新 HTML icon 链接
+      // 4. 导出并更新 HTML icon 链接
       const iconDataUrl = canvas.toDataURL('image/png');
       const appleIconElem = document.getElementById('apple-icon-placeholder');
       const faviconElem = document.getElementById('favicon-placeholder');
@@ -313,7 +280,7 @@
       if (appleIconElem) appleIconElem.href = iconDataUrl;
       if (faviconElem) faviconElem.href = iconDataUrl;
 
-      // 6. 配置 PWA Manifest 属性
+      // 5. 配置 PWA Manifest 属性
       const manifestObj = {
         name: "FollowUp",
         short_name: "FollowUp",
@@ -332,7 +299,6 @@
     function saveData() {
       localStorage.setItem('work_followup_data', JSON.stringify(store));
       updateAppBadge();
-      setupAppIcon(store.items); // 保存时重新绘制动态 App Icon
     }
 
     function updateAppBadge() {
@@ -434,7 +400,6 @@
 
       initDragAndDrop();
       updateAppBadge();
-      setupAppIcon(store.items); // 绘制包含更新数据的 Icon
     }
 
     function initDragAndDrop() {
@@ -633,9 +598,9 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob));
     }
 
-    // 初始化渲染
+    // 初始化 App Icon 与页面渲染
+    setupAppIcon();
     renderToday();
   </script>
 </body>
 </html>
-
