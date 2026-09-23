@@ -48,14 +48,14 @@
     }
     .card.dragging { opacity: 0.4; transform: scale(0.98); border: 2px dashed var(--primary); }
     
-    .card.status-paid { background-color: var(--status-success); border-color: #a7f3d0; }
+    .card.status-paid { background-color: var(--status-success); border-color: #a7f3d0; opacity: 0.85; }
     .card.status-due-today { background-color: var(--status-danger); border-color: #fca5a5; }
     .card.status-due-soon { background-color: var(--status-warning); border-color: #fde047; }
 
     .drag-handle { 
       color: #9ca3af; 
       padding: 4px 8px 4px 0; 
-      font-size: 16px; 
+      font-size: 14px; 
       cursor: grab; 
       display: flex; 
       align-items: center; 
@@ -63,16 +63,23 @@
     }
     .drag-handle:active { cursor: grabbing; }
     
-    .task-main { display: flex; align-items: center; flex: 1; overflow: hidden; margin-right: 6px; }
+    .task-main { display: flex; align-items: flex-start; flex: 1; overflow: hidden; margin-right: 6px; }
     .task-info { flex: 1; min-width: 0; }
-    .task-info h3 { font-size: 14px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .status { font-size: 11px; color: #4b5563; }
+    /* 缩小2号字体（由14px调整为12px），并允许换行完整显示 */
+    .task-info h3 { 
+      font-size: 12px; 
+      line-height: 1.4;
+      margin-bottom: 3px; 
+      word-break: break-word; 
+      white-space: normal; 
+    }
+    .status { font-size: 10px; color: #4b5563; }
     .status.bold { font-weight: bold; }
     
-    .actions { display: flex; align-items: center; gap: 4px; }
-    .btn-icon { background: transparent; border: none; font-size: 13px; cursor: pointer; padding: 3px; border-radius: 4px; opacity: 0.7; }
+    .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .btn-icon { background: transparent; border: none; font-size: 12px; cursor: pointer; padding: 3px; border-radius: 4px; opacity: 0.7; }
     .btn-icon:active { opacity: 1; transform: scale(1.1); }
-    .btn-check { background: var(--primary); color: white; border: none; padding: 5px 10px; border-radius: 14px; font-weight: bold; cursor: pointer; font-size: 12px; margin-left: 2px; }
+    .btn-check { background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 11px; margin-left: 2px; }
     .btn-check.done { background: #059669; }
     
     .calendar-grid { 
@@ -121,9 +128,9 @@
     .badge-no { color: #dc2626; }
 
     .add-bar { display: flex; gap: 6px; margin-bottom: 8px; }
-    .add-bar input[type="text"] { flex: 2; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 13px; }
-    .add-bar input[type="date"] { width: 110px; padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 12px; text-align: center; }
-    .add-bar button { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; }
+    .add-bar input[type="text"] { flex: 2; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 12px; }
+    .add-bar input[type="date"] { width: 110px; padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 11px; text-align: center; }
+    .add-bar button { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -170,26 +177,22 @@
   </div>
 
   <script>
-    // 基础 App Icon 生成器（支持绘制红点角标）
     function generateAppIcon(badgeCount = 0) {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 512;
       const ctx = canvas.getContext('2d');
 
-      // 背景图标
       ctx.fillStyle = '#4f46e5';
       ctx.beginPath();
       ctx.roundRect(0, 0, 512, 512, 100);
       ctx.fill();
 
-      // 白卡片
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.roundRect(90, 80, 332, 352, 24);
       ctx.fill();
 
-      // 清单线条
       const lines = [150, 220, 290, 360];
       lines.forEach((y, i) => {
         ctx.fillStyle = i < 2 ? '#10b981' : '#cbd5e1';
@@ -213,7 +216,6 @@
         ctx.fill();
       });
 
-      // 如果有待办提醒，绘制右上角红点数字角标
       if (badgeCount > 0) {
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
@@ -311,7 +313,6 @@
       }
     }
 
-    // 更新系统角标与 Icon 红点
     function updateAppBadge() {
       const activeAlerts = store.items.filter(item => {
         if (item.done) return false;
@@ -319,7 +320,6 @@
         return status.type === 'due-today' || status.type === 'due-soon';
       }).length;
 
-      // 1. 调用系统原生 Badge API (iOS 16.4+ 支持)
       if ('setAppBadge' in navigator) {
         if (activeAlerts > 0) {
           navigator.setAppBadge(activeAlerts).catch(() => {});
@@ -328,11 +328,9 @@
         }
       }
 
-      // 2. 重新绘制 Icon 写入角标红点
       setupAppIcon(activeAlerts);
     }
 
-    // 请求 Notification 权限（iOS 必须授权后才允许给主屏幕图标显示角标）
     function requestNotificationPermission() {
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then(() => {
@@ -356,10 +354,15 @@
       if (view === 'year') renderYear();
     }
 
+    // 点击完成时：已完成的事项自动排序沉底
     function toggleCheck(id) {
       const item = store.items.find(i => i.id === id);
       if (item) {
         item.done = !item.done;
+        
+        // 自动重新排序：未完成在前，已完成沉底
+        store.items.sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
+        
         saveData();
         renderToday();
       }
@@ -598,12 +601,21 @@
       const date = dateInput.value;
 
       if (name && date) {
-        store.items.push({
+        // 新增事项插入在未完成事项的末尾（已完成事项之前）
+        const newItem = {
           id: Date.now().toString(),
           name: name,
           dueDate: date,
           done: false
-        });
+        };
+        
+        const firstDoneIndex = store.items.findIndex(i => i.done);
+        if (firstDoneIndex === -1) {
+          store.items.push(newItem);
+        } else {
+          store.items.splice(firstDoneIndex, 0, newItem);
+        }
+
         saveData();
         nameInput.value = '';
         dateInput.value = '';
@@ -628,4 +640,3 @@
   </script>
 </body>
 </html>
-
