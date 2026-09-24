@@ -161,6 +161,22 @@
     .week-list-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
     .week-date { font-weight: bold; color: var(--primary); margin-bottom: 4px; }
 
+    /* 年视图搜索框样式 */
+    .year-search-bar {
+      margin-bottom: 8px;
+    }
+    .year-search-bar input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      outline: none;
+      font-size: 12px;
+    }
+    .year-search-bar input:focus {
+      border-color: var(--primary);
+    }
+
     .year-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
     .year-table th, .year-table td { border: 1px solid #e5e7eb; padding: 6px 2px; }
     .year-table th { background: #f9fafb; font-weight: bold; }
@@ -277,6 +293,9 @@
     </div>
 
     <div id="view-year" style="display: none;">
+      <div class="year-search-bar">
+        <input type="text" id="year-search-input" placeholder="🔍 搜索事项名称..." oninput="renderYear()">
+      </div>
       <div class="calendar-grid" style="overflow-x: auto;">
         <table class="year-table">
           <thead><tr id="year-head"></tr></thead>
@@ -741,9 +760,10 @@
     }
 
     function renderYear() {
-      const year = new Date().getFullYear();
       const head = document.getElementById('year-head');
       const body = document.getElementById('year-body');
+      const searchInput = document.getElementById('year-search-input');
+      const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
       let headHtml = `<th>事项</th>`;
       for (let m = 1; m <= 12; m++) {
@@ -751,19 +771,29 @@
       }
       head.innerHTML = headHtml;
 
-      let bodyHtml = '';
-      store.items.forEach(item => {
-        bodyHtml += `<tr><strong><td>${item.name}</td></strong>`;
-        const itemMonth = parseInt(item.dueDate.split('-')[1], 10);
-        for (let m = 1; m <= 12; m++) {
-          if (m === itemMonth) {
-            bodyHtml += `<td>${item.done ? '<span class="badge-ok">✓</span>' : '<span class="badge-no">!</span>'}</td>`;
-          } else {
-            bodyHtml += `<td>-</td>`;
-          }
-        }
-        bodyHtml += `</tr>`;
+      // 筛选匹配事项
+      const filteredItems = store.items.filter(item => {
+        if (!keyword) return true;
+        return item.name.toLowerCase().includes(keyword);
       });
+
+      let bodyHtml = '';
+      if (filteredItems.length === 0) {
+        bodyHtml = `<tr><td colspan="13" style="color: #9ca3af; padding: 12px;">未找到匹配事项</td></tr>`;
+      } else {
+        filteredItems.forEach(item => {
+          bodyHtml += `<tr><strong><td>${item.name}</td></strong>`;
+          const itemMonth = parseInt(item.dueDate.split('-')[1], 10);
+          for (let m = 1; m <= 12; m++) {
+            if (m === itemMonth) {
+              bodyHtml += `<td>${item.done ? '<span class="badge-ok">✓</span>' : '<span class="badge-no">!</span>'}</td>`;
+            } else {
+              bodyHtml += `<td>-</td>`;
+            }
+          }
+          bodyHtml += `</tr>`;
+        });
+      }
       body.innerHTML = bodyHtml;
     }
 
