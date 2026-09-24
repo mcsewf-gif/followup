@@ -3,850 +3,632 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Work Follow Up</title>
-  <meta name="theme-color" content="#4f46e5">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-  <link rel="icon" id="favicon-placeholder">
-  <link rel="manifest" id="manifest-placeholder">
-  <link rel="apple-touch-icon" id="apple-icon-placeholder">
+  <title>Work Follow Up 提醒</title>
   <style>
-    :root { 
-      --primary: #4f46e5; 
-      --bg: #f3f4f6; 
-      --card: #ffffff; 
-      --text: #1f2937;
-      --status-warning: #fef08a; /* 浅黄 */
-      --status-danger: #fecaca;  /* 浅红 */
-      --status-success: #d1fae5; /* 浅绿 */
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 30px; }
-    header { background: var(--primary); color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    header h1 { font-size: 18px; }
-    
-    .nav { display: flex; justify-content: center; background: white; margin: 8px 12px; padding: 3px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .nav button { flex: 1; padding: 6px; border: none; background: transparent; font-weight: bold; color: #6b7280; border-radius: 6px; cursor: pointer; font-size: 13px; }
-    .nav button.active { background: var(--primary); color: white; }
-    .container { padding: 0 12px; }
-    
-    .card { 
-      background: var(--card); 
-      border-radius: 8px; 
-      padding: 8px 12px; 
-      margin-bottom: 6px; 
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      user-select: none; 
-      -webkit-user-select: none; 
-      transition: background-color 0.2s, transform 0.15s ease; 
-      touch-action: pan-y;
-      border: 1px solid transparent;
-    }
-    .card.dragging { opacity: 0.4; transform: scale(0.98); border: 2px dashed var(--primary); }
-    
-    .card.status-paid { background-color: var(--status-success); border-color: #a7f3d0; opacity: 0.85; }
-    .card.status-due-today { background-color: var(--status-danger); border-color: #fca5a5; }
-    .card.status-due-soon { background-color: var(--status-warning); border-color: #fde047; }
-
-    .drag-handle { 
-      color: #9ca3af; 
-      padding: 4px 8px 4px 0; 
-      font-size: 14px; 
-      cursor: grab; 
-      display: flex; 
-      align-items: center; 
-      touch-action: none;
-    }
-    .drag-handle:active { cursor: grabbing; }
-    
-    .task-main { display: flex; align-items: flex-start; flex: 1; overflow: hidden; margin-right: 6px; }
-    .task-info { flex: 1; min-width: 0; }
-    .task-info h3 { 
-      font-size: 12px; 
-      line-height: 1.4;
-      margin-bottom: 3px; 
-      word-break: break-word; 
-      white-space: normal; 
-    }
-    .status { font-size: 10px; color: #4b5563; }
-    .status.bold { font-weight: bold; }
-    
-    .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-    .btn-icon { background: transparent; border: none; font-size: 12px; cursor: pointer; padding: 3px; border-radius: 4px; opacity: 0.7; }
-    .btn-icon:active { opacity: 1; transform: scale(1.1); }
-    .btn-check { background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 11px; margin-left: 2px; }
-    .btn-check.done { background: #059669; }
-    
-    .calendar-grid { 
-      background: white; 
-      border-radius: 8px; 
-      padding: 8px; 
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-      overflow-x: auto; 
+    :root {
+      --primary-color: #5b4fe1;
+      --bg-color: #f4f5f9;
+      --card-completed-bg: #d1f2d9;
+      --card-completed-border: #a3e6b5;
+      --card-due-bg: #fcd7d7;
+      --card-due-border: #f8b4b4;
+      --card-upcoming-bg: #fef0b3;
+      --card-upcoming-border: #fce182;
+      --card-future-bg: #e2e8f0;
+      --card-future-border: #cbd5e1;
+      --btn-secondary-bg: #e0e7ff;
+      --btn-secondary-color: #4338ca;
     }
 
-    /* 月视图导航栏控制 */
-    .month-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      padding: 0 4px;
-    }
-    .month-nav button {
-      background: #e0e7ff;
-      color: var(--primary);
-      border: none;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .month-nav button:active {
-      background: var(--primary);
-      color: white;
-    }
-    .month-title {
-      font-size: 13px;
-      font-weight: bold;
-      color: var(--text);
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* 5天网格（去掉周六周日） */
-    .month-grid { 
-      display: grid; 
-      grid-template-columns: repeat(5, minmax(50px, 1fr)); 
-      gap: 3px; 
-      text-align: center; 
-    }
-    .month-header { 
-      font-size: 11px; 
-      font-weight: bold; 
-      color: var(--primary); 
-      padding: 4px 0; 
-      background: #edf2f7; 
-      border-radius: 4px; 
-    }
-    .month-day { 
-      padding: 3px 2px; 
-      font-size: 10px; 
-      border: 1px solid #eee; 
-      border-radius: 4px; 
-      min-height: 52px; 
-      background: #fafafa; 
-      display: flex;
-      flex-direction: column;
-    }
-    .month-day .num { font-size: 10px; color: #6b7280; font-weight: bold; margin-bottom: 2px; }
-    .month-tag { 
-      color: white; 
-      font-size: 9px; 
-      padding: 2px 3px; 
-      border-radius: 3px; 
-      margin-top: 2px; 
-      overflow: hidden; 
-      white-space: nowrap; 
-      text-overflow: ellipsis; 
-      cursor: pointer;
-    }
-    .month-tag.paid { background: #10b981; }
-    .month-tag.unpaid { background: #ef4444; }
-
-    .week-list-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
-    .week-date { font-weight: bold; color: var(--primary); margin-bottom: 4px; }
-
-    .year-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
-    .year-table th, .year-table td { border: 1px solid #e5e7eb; padding: 6px 2px; }
-    .year-table th { background: #f9fafb; font-weight: bold; }
-    .badge-ok { color: #059669; font-weight: bold; }
-    .badge-no { color: #dc2626; }
-
-    .add-bar { display: flex; gap: 6px; margin-bottom: 8px; }
-    .add-bar input[type="text"] { flex: 2; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 12px; }
-    .add-bar input[type="date"] { width: 110px; padding: 6px 4px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 11px; text-align: center; }
-    .add-bar button { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; }
-
-    /* 弹窗样式 */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.4);
+    body {
+      background-color: #1a1a1a;
       display: flex;
       justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      padding: 16px;
+      padding: 10px;
     }
-    .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
+
+    .app-container {
       width: 100%;
-      max-width: 340px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .modal-header {
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--primary);
-      margin-bottom: 8px;
-    }
-    .modal-body {
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.5;
-      margin-bottom: 12px;
-      word-break: break-word;
-    }
-    .modal-field {
-      margin-top: 8px;
+      max-width: 420px;
+      background-color: var(--bg-color);
+      min-height: 92vh;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
     }
-    .modal-field input[type="date"] {
-      padding: 6px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 12px;
+
+    header {
+      background-color: var(--primary-color);
+      color: white;
+      text-align: center;
+      padding: 18px 15px;
+      font-size: 20px;
+      font-weight: bold;
     }
-    .modal-actions {
+
+    /* 顶部导航 Tabs */
+    .nav-tabs {
       display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 14px;
+      background-color: white;
+      margin: 12px;
+      padding: 4px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    .modal-btn {
-      padding: 6px 12px;
-      border-radius: 6px;
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 4px;
       border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: bold;
+      color: #666;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    /* 视图切换容器 */
+    .view-content {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    .view-content.active {
+      display: flex;
+    }
+
+    /* --- 1. Follow Up 列表视图 --- */
+    .input-section {
+      display: flex;
+      gap: 8px;
+      padding: 0 12px 12px 12px;
+    }
+
+    .task-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 13px;
+      outline: none;
+      background: white;
+    }
+
+    .add-btn {
+      background-color: #48bb78;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .task-list {
+      padding: 0 12px 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .task-card {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      gap: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .task-card.completed {
+      background-color: var(--card-completed-bg);
+      border-color: var(--card-completed-border);
+      opacity: 0.85;
+    }
+
+    .task-card.due-today {
+      background-color: var(--card-due-bg);
+      border-color: var(--card-due-border);
+    }
+
+    .task-card.upcoming {
+      background-color: var(--card-upcoming-bg);
+      border-color: var(--card-upcoming-border);
+    }
+
+    .drag-handle {
+      color: #888;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .task-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-right: 4px;
+    }
+
+    /* 缩小 2 号字体 (原16px调整为14px) */
+    .task-title {
+      font-size: 14px; 
+      font-weight: bold;
+      color: #1a1a1a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .task-card.completed .task-title {
+      text-decoration: line-through;
+      color: #555;
+    }
+
+    .task-sub {
+      font-size: 11px;
+      color: #4a5568;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .action-btns {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      opacity: 0.7;
+      padding: 2px;
+    }
+
+    .done-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 16px;
       font-size: 12px;
       font-weight: bold;
       cursor: pointer;
     }
-    .modal-btn-cancel { background: #e5e7eb; color: #374151; }
-    .modal-btn-delete { background: #fee2e2; color: #dc2626; }
-    .modal-btn-save { background: var(--primary); color: white; }
+
+    .task-card.completed .done-btn {
+      background-color: #2f855a;
+    }
+
+    /* --- 2. 月视图 (Month View) --- */
+    .month-view-container {
+      padding: 0 12px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 月份翻页与按钮导航栏 */
+    .month-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 2px;
+      gap: 6px;
+    }
+
+    .month-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1a1a1a;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .month-btn-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .month-nav-btn {
+      background-color: var(--btn-secondary-bg);
+      color: var(--btn-secondary-color);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .month-nav-btn:hover {
+      background-color: #d0d7fe;
+    }
+
+    .month-nav-btn.today-btn {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .month-nav-btn.today-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* 日历表格样式 */
+    .calendar-board {
+      background: white;
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .week-headers {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .week-header-cell {
+      background-color: #f0f2f8;
+      color: #3b4261;
+      text-align: center;
+      padding: 6px 0;
+      font-size: 13px;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .day-cell {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      min-height: 62px;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .day-cell.empty {
+      background-color: transparent;
+    }
+
+    .day-cell.is-today {
+      border: 1.5px solid var(--primary-color);
+    }
+
+    .day-number {
+      font-size: 12px;
+      font-weight: bold;
+      color: #333;
+      text-align: center;
+    }
+
+    .calendar-tag {
+      font-size: 9px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .calendar-tag.tag-due {
+      background-color: #e53e3e;
+    }
+
+    .calendar-tag.tag-completed {
+      background-color: #38a169;
+    }
+
+    .calendar-tag.tag-upcoming {
+      background-color: #dd6b20;
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Work Follow Up 提醒</h1>
-  </header>
+<div class="app-container">
+  <header>Work Follow Up 提醒</header>
 
-  <div class="nav">
-    <button id="btn-today" class="active" onclick="switchView('today')">Follow Up</button>
-    <button id="btn-week" onclick="switchView('week')">周视图</button>
-    <button id="btn-month" onclick="switchView('month')">月视图</button>
-    <button id="btn-year" onclick="switchView('year')">年视图</button>
+  <!-- 顶部 Tab 切换 -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('followUp')">Follow Up</button>
+    <button class="tab-btn" onclick="switchTab('week')">周视图</button>
+    <button class="tab-btn" onclick="switchTab('month')">月视图</button>
+    <button class="tab-btn" onclick="switchTab('year')">年视图</button>
   </div>
 
-  <div class="container">
-    <div id="view-today">
-      <div class="add-bar">
-        <input type="text" id="new-name-input" placeholder="事项名称...">
-        <input type="date" id="new-date-input">
-        <button onclick="addBill()">添加</button>
+  <!-- 1. Follow Up 视图 -->
+  <div id="followUpView" class="view-content active">
+    <div class="input-section">
+      <input type="text" id="newTaskInput" class="task-input" placeholder="事项名称..." />
+      <button class="add-btn" onclick="addNewTask()">添 加</button>
+    </div>
+
+    <div class="task-list" id="taskList">
+      <!-- 动态渲染列表 -->
+    </div>
+  </div>
+
+  <!-- 2. 月视图 -->
+  <div id="monthView" class="view-content">
+    <div class="month-view-container">
+      <!-- 月份切换栏：在 上个月 和 下个月 中间增加了【本月】按钮 -->
+      <div class="month-header">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">◀ 上个月</button>
+        <button class="month-nav-btn today-btn" onclick="resetToCurrentMonth()">本月</button>
+        <span class="month-title" id="monthDisplayTitle">2026 年 09 月</span>
+        <button class="month-nav-btn" onclick="changeMonth(1)">下个月 ▶</button>
       </div>
-      <div id="today-list"></div>
-    </div>
 
-    <div id="view-week" style="display: none;">
-      <div class="calendar-grid" id="week-container"></div>
-    </div>
-
-    <div id="view-month" style="display: none;">
-      <div class="calendar-grid">
-        <!-- 月视图顶部翻页切换工具条 -->
-        <div class="month-nav">
-          <button onclick="changeMonth(-1)">◀ 上个月</button>
-          <span class="month-title" id="month-title-text">2026 年 09 月</span>
-          <button onclick="changeMonth(1)">下个月 ▶</button>
+      <!-- 日历板块 -->
+      <div class="calendar-board">
+        <div class="week-headers">
+          <div class="week-header-cell">一</div>
+          <div class="week-header-cell">二</div>
+          <div class="week-header-cell">三</div>
+          <div class="week-header-cell">四</div>
+          <div class="week-header-cell">五</div>
         </div>
-        <div class="month-grid" id="month-days"></div>
-      </div>
-    </div>
-
-    <div id="view-year" style="display: none;">
-      <div class="calendar-grid" style="overflow-x: auto;">
-        <table class="year-table">
-          <thead><tr id="year-head"></tr></thead>
-          <tbody id="year-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- 月视图详情弹窗 -->
-  <div id="item-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">事项详情</div>
-      <div class="modal-body">
-        <div id="modal-task-name" style="font-weight: bold; margin-bottom: 6px;"></div>
-        <div id="modal-task-status" style="color: #6b7280; font-size: 11px;"></div>
-        
-        <div class="modal-field">
-          <label for="modal-date-input">修改到期日期：</label>
-          <input type="date" id="modal-date-input">
+        <div class="days-grid" id="calendarDaysGrid">
+          <!-- 动态渲染月度日历网格 -->
         </div>
       </div>
-      <div class="modal-actions">
-        <button class="modal-btn modal-btn-delete" onclick="deleteFromModal()">删除</button>
-        <button class="modal-btn modal-btn-cancel" onclick="closeModal()">取消</button>
-        <button class="modal-btn modal-btn-save" onclick="saveFromModal()">保存</button>
-      </div>
     </div>
   </div>
 
-  <script>
-    function generateAppIcon(badgeCount = 0) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext('2d');
+  <!-- 周视图 / 年视图 占位 -->
+  <div id="weekView" class="view-content" style="padding: 20px; text-align: center; color: #888;">
+    周视图模块开发中...
+  </div>
+  <div id="yearView" class="view-content" style="padding: 20px; text-align: center; color: #888;">
+    年视图模块开发中...
+  </div>
+</div>
 
-      ctx.fillStyle = '#4f46e5';
-      ctx.beginPath();
-      ctx.roundRect(0, 0, 512, 512, 100);
-      ctx.fill();
+<script>
+  // 假定“今天”是 2026-09-24（符合系统当前环境）
+  const TODAY = { year: 2026, month: 9, day: 24 };
 
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(90, 80, 332, 352, 24);
-      ctx.fill();
+  // 当前月视图显示的年月
+  let displayYear = TODAY.year;
+  let displayMonth = TODAY.month;
 
-      const lines = [150, 220, 290, 360];
-      lines.forEach((y, i) => {
-        ctx.fillStyle = i < 2 ? '#10b981' : '#cbd5e1';
-        ctx.beginPath();
-        ctx.roundRect(130, y, 32, 32, 6);
-        ctx.fill();
+  // 事项数据
+  let tasks = [
+    { id: 1, title: '2个供应商...', isDone: false, dueDate: '2026-09-21', statusText: '今日到期 (2026-09-21)', type: 'due-today', dateNum: 21 },
+    { id: 2, title: '163443...', isDone: false, dueDate: '2026-09-21', statusText: '今日到期 (2026-09-21)', type: 'due-today', dateNum: 21 },
+    { id: 3, title: 'follow up e...', isDone: true, dueDate: '2026-09-22', statusText: '已完成 ✓', type: 'completed', dateNum: 22 },
+    { id: 4, title: '163614 ar10 n...', isDone: false, dueDate: '2026-09-22', statusText: '今日到期 (2026-09-22)', type: 'due-today', dateNum: 22 },
+    { id: 5, title: 'call供应商on s...', isDone: false, dueDate: '2026-09-25', statusText: '还剩 3 个工作日到期', type: 'upcoming', dateNum: 25 },
+    { id: 6, title: '165717 cut ...', isDone: true, dueDate: '2026-09-23', statusText: '已完成 ✓', type: 'completed', dateNum: 23 }
+  ];
 
-        if(i < 2) {
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.moveTo(136, y + 16);
-          ctx.lineTo(144, y + 24);
-          ctx.lineTo(156, y + 10);
-          ctx.stroke();
-        }
+  // 1. Tab 切换逻辑
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
 
-        ctx.fillStyle = i < 2 ? '#94a3b8' : '#475569';
-        ctx.beginPath();
-        ctx.roundRect(180, y + 8, 200, 16, 8);
-        ctx.fill();
-      });
-
-      if (badgeCount > 0) {
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.arc(420, 92, 70, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 12;
-        ctx.strokeStyle = '#ffffff';
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 80px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(badgeCount > 99 ? '99+' : badgeCount, 420, 96);
-      }
-
-      return canvas.toDataURL('image/png');
+    if (tabName === 'followUp') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('followUpView').classList.add('active');
+      renderTasks();
+    } else if (tabName === 'week') {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('weekView').classList.add('active');
+    } else if (tabName === 'month') {
+      document.querySelectorAll('.tab-btn')[2].classList.add('active');
+      document.getElementById('monthView').classList.add('active');
+      renderMonthView();
+    } else if (tabName === 'year') {
+      document.querySelectorAll('.tab-btn')[3].classList.add('active');
+      document.getElementById('yearView').classList.add('active');
     }
+  }
 
-    function setupAppIcon(badgeCount = 0) {
-      const iconDataUrl = generateAppIcon(badgeCount);
-      document.getElementById('apple-icon-placeholder').href = iconDataUrl;
-      document.getElementById('favicon-placeholder').href = iconDataUrl;
+  // 2. 渲染 Follow Up 列表（已完成自动置底，字体已调小）
+  function renderTasks() {
+    const listContainer = document.getElementById('taskList');
+    listContainer.innerHTML = '';
 
-      const manifestObj = {
-        name: "FollowUp",
-        short_name: "FollowUp",
-        start_url: ".",
-        display: "standalone",
-        background_color: "#f3f4f6",
-        theme_color: "#4f46e5",
-        icons: [{ src: iconDataUrl, sizes: "512x512", type: "image/png" }]
-      };
+    // 核心逻辑：未完成在上面，完成的自动下沉到底部
+    const sortedTasks = [...tasks].sort((a, b) => {
+      if (a.isDone === b.isDone) return 0;
+      return a.isDone ? 1 : -1;
+    });
+
+    sortedTasks.forEach(task => {
+      const card = document.createElement('div');
       
-      const manifestStr = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifestObj));
-      document.getElementById('manifest-placeholder').href = manifestStr;
-    }
+      let cardClass = 'task-card ';
+      if (task.isDone) {
+        cardClass += 'completed';
+      } else {
+        cardClass += task.type || 'due-today';
+      }
+      card.className = cardClass;
 
-    const DEFAULT_ITEMS = [
-      { id: '1', name: '163443 600kw grease hole audit', dueDate: '2026-09-21', done: false },
-      { id: '2', name: '2个供应商发邮件on site audit', dueDate: '2026-09-21', done: false },
-      { id: '3', name: 'follow up email to Mandeep', dueDate: '2026-09-22', done: false }
-    ];
-    
-    let store = JSON.parse(localStorage.getItem('work_followup_data')) || {
-      items: DEFAULT_ITEMS
+      card.innerHTML = `
+        <div class="drag-handle">☰</div>
+        <div class="task-content">
+          <div class="task-title" title="${task.title}">${task.title}</div>
+          <div class="task-sub">${task.isDone ? '已完成 ✓' : task.statusText}</div>
+        </div>
+        <div class="action-btns">
+          <button class="icon-btn" onclick="editTask(${task.id})" title="编辑">✏️</button>
+          <button class="icon-btn" onclick="deleteTask(${task.id})" title="删除">🗑️</button>
+          <button class="done-btn" onclick="toggleDone(${task.id})">
+            ${task.isDone ? 'Done ✓' : 'Done'}
+          </button>
+        </div>
+      `;
+
+      listContainer.appendChild(card);
+    });
+  }
+
+  // 切换完成状态
+  function toggleDone(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.isDone = !task.isDone;
+      renderTasks();
+      renderMonthView();
+    }
+  }
+
+  function addNewTask() {
+    const input = document.getElementById('newTaskInput');
+    const title = input.value.trim();
+    if (!title) return;
+
+    const newTask = {
+      id: Date.now(),
+      title: title,
+      isDone: false,
+      dueDate: `2026-09-24`,
+      statusText: '今日到期 (2026-09-24)',
+      type: 'due-today',
+      dateNum: 24
     };
 
-    let activeModalItemId = null;
-    
-    // 当前月视图选中的年月状态
-    let currentMonthDate = new Date();
+    tasks.unshift(newTask);
+    input.value = '';
+    renderTasks();
+    renderMonthView();
+  }
 
-    function saveData() {
-      localStorage.setItem('work_followup_data', JSON.stringify(store));
-      updateAppBadge();
-    }
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    renderTasks();
+    renderMonthView();
+  }
 
-    function getWorkingDaysBetween(startDate, endDate) {
-      let count = 0;
-      let cur = new Date(startDate.getTime());
-      cur.setHours(0,0,0,0);
-      let target = new Date(endDate.getTime());
-      target.setHours(0,0,0,0);
-
-      if (cur > target) {
-        while (cur > target) {
-          cur.setDate(cur.getDate() - 1);
-          const day = cur.getDay();
-          if (day !== 0 && day !== 6) count--;
-        }
-        return count;
+  function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      const newTitle = prompt('修改事项名称：', task.title);
+      if (newTitle !== null && newTitle.trim() !== '') {
+        task.title = newTitle.trim();
+        renderTasks();
+        renderMonthView();
       }
-
-      while (cur < target) {
-        cur.setDate(cur.getDate() + 1);
-        const day = cur.getDay();
-        if (day !== 0 && day !== 6) count++;
-      }
-      return count;
     }
+  }
 
-    function getItemStatus(item) {
-      if (item.done) return { type: 'paid', text: '已完成 ✓' };
+  // 3. 渲染月视图
+  function renderMonthView() {
+    const titleElem = document.getElementById('monthDisplayTitle');
+    const formattedMonth = displayMonth < 10 ? `0${displayMonth}` : displayMonth;
+    titleElem.innerText = `${displayYear} 年 ${formattedMonth} 月`;
 
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const due = new Date(item.dueDate + 'T00:00:00');
+    const gridContainer = document.getElementById('calendarDaysGrid');
+    gridContainer.innerHTML = '';
+
+    // 生成工作日(周一至周五)的简易示范网格
+    // 以2026年9月为例，从 1 号到 30 号
+    const daysInMonth = new Date(displayYear, displayMonth, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      // 过滤出工作日（模拟周一到周五）
+      const dateObj = new Date(displayYear, displayMonth - 1, day);
+      const dayOfWeek = dateObj.getDay();
       
-      const workDaysLeft = getWorkingDaysBetween(today, due);
+      // 0是周日，6是周六，排除周末
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
-      if (workDaysLeft < 0) {
-        return { type: 'due-today', text: `已逾期 ${Math.abs(workDaysLeft)} 个工作日 (${item.dueDate})` };
-      } else if (workDaysLeft === 0) {
-        return { type: 'due-today', text: `今日到期 (${item.dueDate})` };
-      } else if (workDaysLeft <= 3) {
-        return { type: 'due-soon', text: `还剩 ${workDaysLeft} 个工作日到期 (${item.dueDate})` };
-      } else {
-        return { type: 'normal', text: `到期日: ${item.dueDate}` };
-      }
-    }
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
 
-    function updateAppBadge() {
-      const activeAlerts = store.items.filter(item => {
-        if (item.done) return false;
-        const status = getItemStatus(item);
-        return status.type === 'due-today' || status.type === 'due-soon';
-      }).length;
-
-      if ('setAppBadge' in navigator) {
-        if (activeAlerts > 0) {
-          navigator.setAppBadge(activeAlerts).catch(() => {});
-        } else {
-          navigator.clearAppBadge().catch(() => {});
-        }
+      // 是否是今天
+      if (displayYear === TODAY.year && displayMonth === TODAY.month && day === TODAY.day) {
+        cell.classList.add('is-today');
       }
 
-      setupAppIcon(activeAlerts);
-    }
+      let cellHTML = `<div class="day-number">${day}</div>`;
 
-    function requestNotificationPermission() {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(() => {
-          updateAppBadge();
+      // 匹配当天的任务标签（仅在2026年9月显示示例数据）
+      if (displayYear === 2026 && displayMonth === 9) {
+        const dayTasks = tasks.filter(t => t.dateNum === day);
+        dayTasks.forEach(t => {
+          let tagClass = 'tag-due';
+          if (t.isDone) tagClass = 'tag-completed';
+          else if (t.type === 'upcoming') tagClass = 'tag-upcoming';
+
+          cellHTML += `<div class="calendar-tag ${tagClass}">${t.title}</div>`;
         });
       }
+
+      cell.innerHTML = cellHTML;
+      gridContainer.appendChild(cell);
     }
+  }
 
-    function switchView(view) {
-      document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-      document.getElementById(`btn-${view}`).classList.add('active');
-      
-      document.getElementById('view-today').style.display = view === 'today' ? 'block' : 'none';
-      document.getElementById('view-week').style.display = view === 'week' ? 'block' : 'none';
-      document.getElementById('view-month').style.display = view === 'month' ? 'block' : 'none';
-      document.getElementById('view-year').style.display = view === 'year' ? 'block' : 'none';
-
-      if (view === 'today') renderToday();
-      if (view === 'week') renderWeek();
-      if (view === 'month') renderMonth();
-      if (view === 'year') renderYear();
+  // 4. 月份翻页与快速回到本月
+  function changeMonth(delta) {
+    displayMonth += delta;
+    if (displayMonth > 12) {
+      displayMonth = 1;
+      displayYear++;
+    } else if (displayMonth < 1) {
+      displayMonth = 12;
+      displayYear--;
     }
+    renderMonthView();
+  }
 
-    function toggleCheck(id) {
-      const item = store.items.find(i => i.id === id);
-      if (item) {
-        item.done = !item.done;
-        store.items.sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1));
-        saveData();
-        renderToday();
-      }
-    }
+  // 点击【本月】按钮一键回到当前月份
+  function resetToCurrentMonth() {
+    displayYear = TODAY.year;
+    displayMonth = TODAY.month;
+    renderMonthView();
+  }
 
-    function editItem(id) {
-      const item = store.items.find(i => i.id === id);
-      if (!item) return;
-      
-      const newName = prompt('修改事项名称：', item.name);
-      if (newName === null) return;
-      
-      const newDate = prompt('修改到期日 (YYYY-MM-DD)：', item.dueDate);
-      if (newDate === null) return;
+  // 页面加载完成初始化
+  document.addEventListener('DOMContentLoaded', () => {
+    renderTasks();
+  });
+</script>
 
-      if (newName.trim() && newDate.trim()) {
-        item.name = newName.trim();
-        item.dueDate = newDate.trim();
-        saveData();
-        renderToday();
-      }
-    }
-
-    function deleteItem(id) {
-      const item = store.items.find(i => i.id === id);
-      if (item && confirm(`确定删除“${item.name}”吗？`)) {
-        store.items = store.items.filter(i => i.id !== id);
-        saveData();
-        renderToday();
-      }
-    }
-
-    function renderToday() {
-      const container = document.getElementById('today-list');
-
-      container.innerHTML = store.items.map((item) => {
-        const status = getItemStatus(item);
-        let cardClass = '';
-        if (status.type === 'paid') cardClass = 'status-paid';
-        if (status.type === 'due-today') cardClass = 'status-due-today';
-        if (status.type === 'due-soon') cardClass = 'status-due-soon';
-
-        return `
-          <div class="card ${cardClass}" data-id="${item.id}">
-            <div class="task-main">
-              <span class="drag-handle">☰</span>
-              <div class="task-info">
-                <h3>${item.name}</h3>
-                <div class="status ${cardClass ? 'bold' : ''}">${status.text}</div>
-              </div>
-            </div>
-            <div class="actions">
-              <button class="btn-icon" title="修改" onclick="event.stopPropagation(); editItem('${item.id}')">✏️</button>
-              <button class="btn-icon" title="删除" onclick="event.stopPropagation(); deleteItem('${item.id}')">🗑️</button>
-              <button class="btn-check ${item.done ? 'done' : ''}" onclick="event.stopPropagation(); toggleCheck('${item.id}')">
-                ${item.done ? 'Done ✓' : 'Done'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      initDragAndDrop();
-      updateAppBadge();
-    }
-
-    function initDragAndDrop() {
-      const container = document.getElementById('today-list');
-      const cards = container.querySelectorAll('.card');
-      let draggedCard = null;
-
-      cards.forEach(card => {
-        const handle = card.querySelector('.drag-handle');
-
-        handle.addEventListener('mousedown', () => card.setAttribute('draggable', 'true'));
-        
-        card.addEventListener('dragstart', () => {
-          draggedCard = card;
-          setTimeout(() => card.classList.add('dragging'), 0);
-        });
-
-        card.addEventListener('dragend', () => {
-          card.removeAttribute('draggable');
-          card.classList.remove('dragging');
-          updateItemOrder();
-        });
-
-        handle.addEventListener('touchstart', () => {
-          draggedCard = card;
-          card.classList.add('dragging');
-        }, { passive: true });
-
-        handle.addEventListener('touchmove', (e) => {
-          if (!draggedCard) return;
-          const touch = e.touches[0];
-          const target = document.elementFromPoint(touch.clientX, touch.clientY);
-          const targetCard = target ? target.closest('.card') : null;
-
-          if (targetCard && targetCard !== draggedCard) {
-            const rect = targetCard.getBoundingClientRect();
-            const next = (touch.clientY - rect.top) > (rect.height / 2);
-            container.insertBefore(draggedCard, next ? targetCard.nextSibling : targetCard);
-          }
-        }, { passive: true });
-
-        handle.addEventListener('touchend', () => {
-          if (draggedCard) {
-            draggedCard.classList.remove('dragging');
-            draggedCard = null;
-            updateItemOrder();
-          }
-        });
-      });
-
-      container.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
-        const afterElement = draggableElements.reduce((closest, child) => {
-          const box = child.getBoundingClientRect();
-          const offset = e.clientY - box.top - box.height / 2;
-          return (offset < 0 && offset > closest.offset) ? { offset, element: child } : closest;
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-
-        if (afterElement == null) {
-          container.appendChild(draggedCard);
-        } else {
-          container.insertBefore(draggedCard, afterElement);
-        }
-      });
-    }
-
-    function updateItemOrder() {
-      const container = document.getElementById('today-list');
-      const cards = container.querySelectorAll('.card');
-      const newIds = Array.from(cards).map(c => c.getAttribute('data-id'));
-      
-      store.items.sort((a, b) => newIds.indexOf(a.id) - newIds.indexOf(b.id));
-      saveData();
-    }
-
-    function renderWeek() {
-      const container = document.getElementById('week-container');
-      const today = new Date();
-      
-      const dayOfWeek = today.getDay();
-      const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-      
-      const monday = new Date(today);
-      monday.setDate(today.getDate() + distanceToMonday);
-
-      const weekNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-      let html = '';
-
-      for (let i = 0; i < 7; i++) {
-        const currentDay = new Date(monday);
-        currentDay.setDate(monday.getDate() + i);
-
-        const year = currentDay.getFullYear();
-        const month = String(currentDay.getMonth() + 1).padStart(2, '0');
-        const date = String(currentDay.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${date}`;
-
-        const dayItems = store.items.filter(item => item.dueDate === dateStr);
-        const itemsHtml = dayItems.length > 0 ? dayItems.map(item => `
-          <div style="margin-left:8px; margin-top:2px; color:${item.done ? '#059669' : '#dc2626'};">
-            • ${item.name} (${item.done ? '已完成' : '待处理'})
-          </div>
-        `).join('') : '<div style="margin-left:8px; color:#9ca3af;">无到期事项</div>';
-
-        html += `
-          <div class="week-list-item">
-            <div class="week-date">${dateStr} (${weekNames[i]})</div>
-            ${itemsHtml}
-          </div>
-        `;
-      }
-      container.innerHTML = html;
-    }
-
-    /* 月视图（仅展示周一至周五，支持上/下个月切换） */
-    function renderMonth() {
-      const container = document.getElementById('month-days');
-      const year = currentMonthDate.getFullYear();
-      const month = currentMonthDate.getMonth();
-      
-      // 更新标题文本
-      document.getElementById('month-title-text').textContent = `${year} 年 ${String(month + 1).padStart(2, '0')} 月`;
-
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      const weekHeaders = ['一', '二', '三', '四', '五'];
-      let html = weekHeaders.map(h => `<div class="month-header">${h}</div>`).join('');
-
-      // 获取当月1号的星期几（0是周日，1是周一 ... 6是周六）
-      const firstDay = new Date(year, month, 1).getDay();
-      
-      // 填充首周偏移空白格（仅计算工作日）
-      let offset = 0;
-      if (firstDay === 0) offset = 4; // 周日 -> 偏移到上一周五
-      else if (firstDay === 6) offset = 0; // 周六 -> 不占工作日列
-      else offset = firstDay - 1; // 周一到周五 (1->0, 2->1 ... 5->4)
-
-      for (let i = 0; i < offset; i++) {
-        html += `<div class="month-day" style="background:#f3f4f6; border:none;"></div>`;
-      }
-
-      // 循环渲染当月日期（仅保留周一至周五）
-      for (let day = 1; day <= daysInMonth; day++) {
-        const currentDate = new Date(year, month, day);
-        const dayOfWeek = currentDate.getDay();
-
-        // 跳过周末 (0: 周日, 6: 周六)
-        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const todayItems = store.items.filter(b => b.dueDate === dateStr);
-        
-        const tags = todayItems.map(b => `
-          <div class="month-tag ${b.done ? 'paid' : 'unpaid'}" onclick="openModal('${b.id}')">
-            ${b.name}
-          </div>
-        `).join('');
-
-        html += `
-          <div class="month-day">
-            <div class="num">${day}</div>
-            ${tags}
-          </div>
-        `;
-      }
-      container.innerHTML = html;
-    }
-
-    // 翻页切换月份
-    function changeMonth(offset) {
-      currentMonthDate.setMonth(currentMonthDate.getMonth() + offset);
-      renderMonth();
-    }
-
-    function renderYear() {
-      const year = new Date().getFullYear();
-      const head = document.getElementById('year-head');
-      const body = document.getElementById('year-body');
-
-      let headHtml = `<th>事项</th>`;
-      for (let m = 1; m <= 12; m++) {
-        headHtml += `<th>${m}月</th>`;
-      }
-      head.innerHTML = headHtml;
-
-      let bodyHtml = '';
-      store.items.forEach(item => {
-        bodyHtml += `<tr><strong><td>${item.name}</td></strong>`;
-        const itemMonth = parseInt(item.dueDate.split('-')[1], 10);
-        for (let m = 1; m <= 12; m++) {
-          if (m === itemMonth) {
-            bodyHtml += `<td>${item.done ? '<span class="badge-ok">✓</span>' : '<span class="badge-no">!</span>'}</td>`;
-          } else {
-            bodyHtml += `<td>-</td>`;
-          }
-        }
-        bodyHtml += `</tr>`;
-      });
-      body.innerHTML = bodyHtml;
-    }
-
-    /* 月视图弹窗功能 */
-    function openModal(id) {
-      const item = store.items.find(i => i.id === id);
-      if (!item) return;
-
-      activeModalItemId = id;
-      const status = getItemStatus(item);
-
-      document.getElementById('modal-task-name').textContent = item.name;
-      document.getElementById('modal-task-status').textContent = `状态：${status.text}`;
-      document.getElementById('modal-date-input').value = item.dueDate;
-
-      document.getElementById('item-modal').style.display = 'flex';
-    }
-
-    function closeModal() {
-      activeModalItemId = null;
-      document.getElementById('item-modal').style.display = 'none';
-    }
-
-    function saveFromModal() {
-      if (!activeModalItemId) return;
-      const item = store.items.find(i => i.id === activeModalItemId);
-      const newDate = document.getElementById('modal-date-input').value;
-
-      if (item && newDate) {
-        item.dueDate = newDate;
-        saveData();
-        closeModal();
-        renderMonth();
-      }
-    }
-
-    function deleteFromModal() {
-      if (!activeModalItemId) return;
-      const item = store.items.find(i => i.id === activeModalItemId);
-      
-      if (item && confirm(`确定要删除“${item.name}”吗？`)) {
-        store.items = store.items.filter(i => i.id !== activeModalItemId);
-        saveData();
-        closeModal();
-        renderMonth();
-      }
-    }
-
-    function addBill() {
-      const nameInput = document.getElementById('new-name-input');
-      const dateInput = document.getElementById('new-date-input');
-      
-      const name = nameInput.value.trim();
-      const date = dateInput.value;
-
-      if (name && date) {
-        const newItem = {
-          id: Date.now().toString(),
-          name: name,
-          dueDate: date,
-          done: false
-        };
-        
-        const firstDoneIndex = store.items.findIndex(i => i.done);
-        if (firstDoneIndex === -1) {
-          store.items.push(newItem);
-        } else {
-          store.items.splice(firstDoneIndex, 0, newItem);
-        }
-
-        saveData();
-        nameInput.value = '';
-        dateInput.value = '';
-        renderToday();
-      } else {
-        alert('请输入有效的事项名称和到期日期');
-      }
-    }
-
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-        self.addEventListener('fetch', e => e.respondWith(fetch(e.request)));
-      `;
-      const blob = new Blob([swCode], { type: 'application/javascript' });
-      navigator.serviceWorker.register(URL.createObjectURL(blob));
-    }
-
-    document.addEventListener('click', requestNotificationPermission, { once: true });
-
-    renderToday();
-  </script>
 </body>
 </html>
